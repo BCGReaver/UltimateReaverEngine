@@ -41,8 +41,7 @@ Base DirectX 11 minimalista para prácticas de Gráficas Computacionales 3D, con
 
 ---
 
-## 📘 Y luego, enlázalo desde tu README
-Dentro del `README.md`, agrega una línea como esta donde hables del flujo o la arquitectura:
+## Pipeline
 
 ```markdown
 ## Diagrama del pipeline
