@@ -47,6 +47,30 @@
     <ClInclude Include="include\Texture.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\BaseApp.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\InputLayout.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MeshComponent.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ModelLoader.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SamplerState.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ShaderProgram.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Viewport.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="UltimateReaverEngine.rc">
@@ -76,10 +100,31 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="UltimateReaverEngine.cpp" />
+    <ClCompile Include="source\BaseApp.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\InputLayout.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ModelLoader.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SamplerState.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ShaderProgram.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Viewport.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="bin\UltimateReaverEngine.fx">
+    <Text Include="bin\UltimateReaverEngine.fx">
       <Filter>Shaders</Filter>
-    </FxCompile>
+    </Text>
   </ItemGroup>
 </Project>

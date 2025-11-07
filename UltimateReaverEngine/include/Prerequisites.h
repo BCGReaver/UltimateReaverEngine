@@ -20,6 +20,7 @@
 #include <windows.h>
 #include <xnamath.h>
 #include <thread>
+#include <map>
 
 // -----------------------------
 // DirectX 11
@@ -160,4 +161,9 @@ enum ExtensionType {
   DDS = 0,
   PNG = 1,
   JPG = 2
+};
+
+enum ShaderType {
+  VERTEX_SHADER = 0, ///< Vertex shader type.
+  PIXEL_SHADER = 1   ///< Pixel shader type.
 };

@@ -87,10 +87,10 @@ private:
   D3D_FEATURE_LEVEL m_featureLevel = D3D_FEATURE_LEVEL_11_0;
 
   /** @brief Cuántas muestras por píxel para MSAA (4 = 4x). */
-  unsigned int m_sampleCount = 1;
+  unsigned int m_sampleCount;
 
   /** @brief Niveles de calidad disponibles para ese MSAA. */
-  unsigned int m_qualityLevels = 0;
+  unsigned int m_qualityLevels;
 
   /** @brief Interfaz DXGI “vista” de device (para llegar a adapter/factory). */
   IDXGIDevice* m_dxgiDevice = nullptr;
