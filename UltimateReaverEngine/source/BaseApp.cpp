@@ -1,302 +1,177 @@
-#include "BaseApp.h"
+﻿#include "BaseApp.h"
+#include <string>
+#include <Windows.h>
 
-BaseApp::BaseApp(HINSTANCE hInst, int nCmdShow) {
+BaseApp::BaseApp(HINSTANCE, int) {}
 
-}
+int BaseApp::run(HINSTANCE hInst, int nCmdShow) {
+  if (FAILED(m_window.init(hInst, nCmdShow, wndProc))) return 0;
+  if (FAILED(init())) return 0;
 
-int 
-BaseApp::run(HINSTANCE hInst, int nCmdShow) {
-  if (FAILED(m_window.init(hInst, nCmdShow, wndProc))) {
-    return 0;
-  }
-  if (FAILED(init()))
-    return 0;
-
-  // Main message loop
   MSG msg = {};
   LARGE_INTEGER freq, prev;
   QueryPerformanceFrequency(&freq);
   QueryPerformanceCounter(&prev);
-  while (WM_QUIT != msg.message)
-  {
-    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-    {
+
+  while (WM_QUIT != msg.message) {
+    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
-    else
-    {
+    else {
       LARGE_INTEGER curr;
       QueryPerformanceCounter(&curr);
-      float deltaTime = static_cast<float>(curr.QuadPart - prev.QuadPart) / freq.QuadPart;
+      float dt = static_cast<float>(curr.QuadPart - prev.QuadPart) / static_cast<float>(freq.QuadPart);
       prev = curr;
-      update(deltaTime);
+      update(dt);
       render();
     }
   }
   return (int)msg.wParam;
 }
 
-HRESULT 
-BaseApp::init() {
-    HRESULT hr = S_OK;
+HRESULT BaseApp::init() {
+  HRESULT hr = S_OK;
 
-    // Create Swap Chain
-    hr = m_swapChain.init(m_device, m_deviceContext, m_backBuffer, m_window);
+  // SwapChain / RTV / Depth / DSV / Viewport
+  if (FAILED(hr = m_swapChain.init(m_device, m_deviceContext, m_backBuffer, m_window))) return hr;
+  if (FAILED(hr = m_renderTargetView.init(m_device, m_backBuffer, DXGI_FORMAT_R8G8B8A8_UNORM))) return hr;
+  if (FAILED(hr = m_depthStencil.init(m_device, m_window.m_width, m_window.m_height,
+    DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_BIND_DEPTH_STENCIL, 4, 0))) return hr;
+  if (FAILED(hr = m_depthStencilView.init(m_device, m_depthStencil, DXGI_FORMAT_D24_UNORM_S8_UINT))) return hr;
+  if (FAILED(hr = m_viewport.init(m_window))) return hr;
 
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize SwapChain. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
+  // Input Layout: POSITION(float3) + TEXCOORD(float2)
+  std::vector<D3D11_INPUT_ELEMENT_DESC> layout;
+  {
+    D3D11_INPUT_ELEMENT_DESC e = {};
+    e.SemanticName = "POSITION";
+    e.SemanticIndex = 0;
+    e.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    e.InputSlot = 0;
+    e.AlignedByteOffset = 0;
+    e.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    e.InstanceDataStepRate = 0;
+    layout.push_back(e);
+  }
+  {
+    D3D11_INPUT_ELEMENT_DESC e = {};
+    e.SemanticName = "TEXCOORD";
+    e.SemanticIndex = 0;
+    e.Format = DXGI_FORMAT_R32G32_FLOAT; // <-- float2 (OBJ vt)
+    e.InputSlot = 0;
+    e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+    e.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    e.InstanceDataStepRate = 0;
+    layout.push_back(e);
+  }
 
-    // Create a render target view
-    hr = m_renderTargetView.init(m_device, m_backBuffer, DXGI_FORMAT_R8G8B8A8_UNORM);
+  if (FAILED(hr = m_shaderProgram.init(m_device, "UltimateReaverEngine.fx", layout))) return hr;
 
-    if (FAILED(hr))
-    {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize RenderTargetView. HRESULT: "
-          + std::to_string(hr)).c_str());
-      return hr;
-    }
+  // Log del Working Directory + existencia del OBJ
+  wchar_t cwd[MAX_PATH]; GetCurrentDirectoryW(MAX_PATH, cwd);
+  OutputDebugStringW((std::wstring(L"[CWD] ") + cwd + L"\n").c_str());
 
-    // Create depth stencil texture
-    hr = m_depthStencil.init(m_device,
-      m_window.m_width,
-      m_window.m_height,
-      DXGI_FORMAT_D24_UNORM_S8_UINT,
-      D3D11_BIND_DEPTH_STENCIL,
-      4,
-      0);
+  // Ajusta el nombre si usas otro .obj
+  const wchar_t* OBJ_NAME_W = L"thor hammer .obj";
+  DWORD attr = GetFileAttributesW(OBJ_NAME_W);
+  if (attr == INVALID_FILE_ATTRIBUTES) {
+    MessageBoxW(nullptr, L"No existe thor hammer .obj en el Working Directory", L"RUTA", MB_OK | MB_ICONERROR);
+    return E_FAIL;
+  }
 
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize DepthStencil. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
+  // Cargar OBJ (sin fallback al cubo)
+  if (!m_modelLoader.loadModel("thor hammer .obj", m_mesh)) {
+    MessageBoxW(nullptr, L"Falló la carga de thor hammer .obj (parser).", L"ModelLoader", MB_OK | MB_ICONERROR);
+    return E_FAIL;
+  }
 
-    // Crete the depth stencil view
-    hr = m_depthStencilView.init(m_device,
-      m_depthStencil,
-      DXGI_FORMAT_D24_UNORM_S8_UINT);
+  // Buffers GPU a partir de m_mesh
+  if (FAILED(hr = m_vertexBuffer.init(m_device, m_mesh, D3D11_BIND_VERTEX_BUFFER))) return hr;
+  if (FAILED(hr = m_indexBuffer.init(m_device, m_mesh, D3D11_BIND_INDEX_BUFFER)))   return hr;
 
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize DepthStencilView. HRESULT: "
-          + std::to_string(hr)).c_str());
-      return hr;
-    }
+  m_deviceContext.m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // Create the viewport
-    hr = m_viewport.init(m_window);
+  // Const buffers
+  if (FAILED(hr = m_cbNeverChanges.init(m_device, sizeof(CBNeverChanges))))      return hr;
+  if (FAILED(hr = m_cbChangeOnResize.init(m_device, sizeof(CBChangeOnResize))))  return hr;
+  if (FAILED(hr = m_cbChangesEveryFrame.init(m_device, sizeof(CBChangesEveryFrame)))) return hr;
 
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize Viewport. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
+  // Textura y sampler (temporal)
+  if (FAILED(hr = m_textureCube.init(m_device, "seafloor", ExtensionType::DDS))) return hr;
+  if (FAILED(hr = m_samplerState.init(m_device))) return hr;
 
-    // Load Resources
+  // Matrices base
+  m_World = XMMatrixIdentity();
+  XMVECTOR Eye = XMVectorSet(0.0f, 3.0f, -6.0f, 0.0f);
+  XMVECTOR At = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+  XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+  m_View = XMMatrixLookAtLH(Eye, At, Up);
 
-    // Define the input layout
-    std::vector<D3D11_INPUT_ELEMENT_DESC> layout;
-    D3D11_INPUT_ELEMENT_DESC position;
-    position.SemanticName = "POSITION";
-    position.SemanticIndex = 0;
-    position.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    position.InputSlot = 0;
-    position.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT /*0*/;
-    position.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    position.InstanceDataStepRate = 0;
-    layout.push_back(position);
+  cbNeverChanges.mView = XMMatrixTranspose(m_View);
+  m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4,
+    static_cast<float>(m_window.m_width) / static_cast<float>(m_window.m_height),
+    0.01f, 100.0f);
+  cbChangesOnResize.mProjection = XMMatrixTranspose(m_Projection);
 
-    D3D11_INPUT_ELEMENT_DESC texcoord;
-    texcoord.SemanticName = "TEXCOORD";
-    texcoord.SemanticIndex = 0;
-    texcoord.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    texcoord.InputSlot = 0;
-    texcoord.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT /*0*/;
-    texcoord.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    texcoord.InstanceDataStepRate = 0;
-    layout.push_back(texcoord);
+  // Log de conteos del OBJ
+  char tmp[128];
+  sprintf_s(tmp, "[BaseApp] OBJ -> Verts:%d Indices:%d\n", m_mesh.m_numVertex, m_mesh.m_numIndex);
+  OutputDebugStringA(tmp);
 
-     // Create the Shader Program
-    hr = m_shaderProgram.init(m_device, "UltimateReaverEngine.fx", layout);
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize ShaderProgram. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    bool loadSuccess = m_modelLoader.loadModel("test.obj", m_mesh);
-
-    if (!loadSuccess)
-    {
-      ERROR("BaseApp.cpp", "init", "Failed to load model .obj");
-      return E_FAIL;
-    }
-
-    // Create vertex buffer
-    hr = m_vertexBuffer.init(m_device, m_mesh, D3D11_BIND_VERTEX_BUFFER);
-
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize VertexBuffer. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    // Create index buffer
-    hr = m_indexBuffer.init(m_device, m_mesh, D3D11_BIND_INDEX_BUFFER);
-
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize IndexBuffer. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    // Set primitive topology
-    m_deviceContext.m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    // Create the constant buffers
-    hr = m_cbNeverChanges.init(m_device, sizeof(CBNeverChanges));
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize NeverChanges Buffer. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    hr = m_cbChangeOnResize.init(m_device, sizeof(CBChangeOnResize));
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize ChangeOnResize Buffer. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    hr = m_cbChangesEveryFrame.init(m_device, sizeof(CBChangesEveryFrame));
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize ChangesEveryFrame Buffer. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    hr = m_textureCube.init(m_device, "seafloor", ExtensionType::DDS);
-
-    // Load the Texture
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize texture Cube. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    // Create the sample state
-    hr = m_samplerState.init(m_device);
-    if (FAILED(hr)) {
-      ERROR("Main", "InitDevice",
-        ("Failed to initialize SamplerState. HRESULT: " + std::to_string(hr)).c_str());
-      return hr;
-    }
-
-    // Initialize the world matrices
-    m_World = XMMatrixIdentity();
-
-    // Initialize the view matrix
-    XMVECTOR Eye = XMVectorSet(0.0f, 3.0f, -6.0f, 0.0f);
-    XMVECTOR At = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    m_View = XMMatrixLookAtLH(Eye, At, Up);
-
-    // Initialize the projection matrix
-    cbNeverChanges.mView = XMMatrixTranspose(m_View);
-    m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4,
-                                            m_window.m_width / (FLOAT)m_window.m_height,
-                                            0.01f,
-                                            100.0f);
-    cbChangesOnResize.mProjection = XMMatrixTranspose(m_Projection);
-
-    return S_OK;
+  return S_OK;
 }
 
-void BaseApp::update(float deltaTime) {
-  // Update our time
-  static float t = 0.0f;
-  if (m_swapChain.m_driverType == D3D_DRIVER_TYPE_REFERENCE)
-  {
-    t += (float)XM_PI * 0.0125f;
-  }
-  else
-  {
-    static DWORD dwTimeStart = 0;
-    DWORD dwTimeCur = GetTickCount();
-    if (dwTimeStart == 0)
-      dwTimeStart = dwTimeCur;
-    t = (dwTimeCur - dwTimeStart) / 1000.0f;
-  }
-
-  // Actualizar la matriz de proyecci�n y vista
+void BaseApp::update(float /*dt*/) {
+  // View / Projection
   cbNeverChanges.mView = XMMatrixTranspose(m_View);
   m_cbNeverChanges.update(m_deviceContext, nullptr, 0, nullptr, &cbNeverChanges, 0, 0);
-  m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_window.m_width / (FLOAT)m_window.m_height, 0.01f, 100.0f);
+
+  m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4,
+    static_cast<float>(m_window.m_width) / static_cast<float>(m_window.m_height),
+    0.01f, 100.0f);
   cbChangesOnResize.mProjection = XMMatrixTranspose(m_Projection);
   m_cbChangeOnResize.update(m_deviceContext, nullptr, 0, nullptr, &cbChangesOnResize, 0, 0);
 
-  // Modify the color
-  m_vMeshColor.x = (sinf(t * 1.0f) + 1.0f) * 0.5f;
-  m_vMeshColor.y = (cosf(t * 3.0f) + 1.0f) * 0.5f;
-  m_vMeshColor.z = (sinf(t * 5.0f) + 1.0f) * 0.5f;
-
-  // Rotate cube around the origin
-  m_World = XMMatrixRotationY(t);
+  // Sin rotación ni tinte (puro OBJ)
+  m_vMeshColor = XMFLOAT4(1.f, 1.f, 1.f, 1.f);
+  m_World = XMMatrixIdentity();
   cb.mWorld = XMMatrixTranspose(m_World);
   cb.vMeshColor = m_vMeshColor;
   m_cbChangesEveryFrame.update(m_deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
 }
 
-void
-BaseApp::render() {
-  // Set Render Target View
+void BaseApp::render() {
   float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
   m_renderTargetView.render(m_deviceContext, m_depthStencilView, 1, ClearColor);
 
-  // Set Viewport
   m_viewport.render(m_deviceContext);
-
-  // Set depth stencil view
   m_depthStencilView.render(m_deviceContext);
-
-  // Set shader program
   m_shaderProgram.render(m_deviceContext);
 
-
-  // Render the cube
-  // Asignar buffers Vertex e Index
+  // VB/IB del OBJ
   m_vertexBuffer.render(m_deviceContext, 0, 1);
   m_indexBuffer.render(m_deviceContext, 0, 1, false, DXGI_FORMAT_R32_UINT);
 
-  // Asignar buffers constantes
+  // Const buffers & textura
   m_cbNeverChanges.render(m_deviceContext, 0, 1);
   m_cbChangeOnResize.render(m_deviceContext, 1, 1);
   m_cbChangesEveryFrame.render(m_deviceContext, 2, 1);
   m_cbChangesEveryFrame.render(m_deviceContext, 2, 1, true);
 
-  // Asignar textura y sampler
   m_textureCube.render(m_deviceContext, 0, 1);
   m_samplerState.render(m_deviceContext, 0, 1);
-  m_deviceContext.DrawIndexed(m_mesh.m_numIndex, 0, 0);
 
-  //
-  // Present our back buffer to our front buffer
-  //
+  // Dibuja el OBJ (no cubo)
+  m_deviceContext.DrawIndexed(static_cast<UINT>(m_mesh.m_numIndex), 0, 0);
+
   m_swapChain.present();
 }
 
-void
-BaseApp::destroy() {
+void BaseApp::destroy() {
   if (m_deviceContext.m_deviceContext) m_deviceContext.m_deviceContext->ClearState();
-  
   m_samplerState.destroy();
   m_textureCube.destroy();
-
   m_cbNeverChanges.destroy();
   m_cbChangeOnResize.destroy();
   m_cbChangesEveryFrame.destroy();
@@ -312,47 +187,16 @@ BaseApp::destroy() {
   m_device.destroy();
 }
 
-LRESULT 
-BaseApp::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-  switch (message)
-  {
-  case WM_CREATE:
-  {
+LRESULT BaseApp::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+  switch (message) {
+  case WM_CREATE: {
     CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
     SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)pCreate->lpCreateParams);
-  }
-  return 0;
-  case WM_PAINT:
-  {
-    PAINTSTRUCT ps;
-    BeginPaint(hWnd, &ps);
-    EndPaint(hWnd, &ps);
-  }
-  return 0;
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    return 0;
+  } return 0;
+  case WM_PAINT: {
+    PAINTSTRUCT ps; BeginPaint(hWnd, &ps); EndPaint(hWnd, &ps);
+  } return 0;
+  case WM_DESTROY: PostQuitMessage(0); return 0;
   }
   return DefWindowProc(hWnd, message, wParam, lParam);
-  /*
-  PAINTSTRUCT ps;
-  HDC hdc;
-
-  switch (message)
-  {
-  case WM_PAINT:
-    hdc = BeginPaint(hWnd, &ps);
-    EndPaint(hWnd, &ps);
-    break;
-
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    break;
-
-  default:
-    return DefWindowProc(hWnd, message, wParam, lParam);
-  }
-
-  return 0;
-  */
 }

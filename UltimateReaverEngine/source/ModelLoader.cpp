@@ -1,119 +1,173 @@
 #include "ModelLoader.h"
 #include <fstream>
+#include <sstream>
+#include <map>
+#include <Windows.h>
 
-bool 
+static bool fileExistsA(const char* p) {
+  DWORD a = GetFileAttributesA(p);
+  return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+static bool safeNextInt(std::stringstream& ss, int& out) {
+  std::string tok;
+  if (!std::getline(ss, tok, '/')) return false;
+  if (tok.empty()) return false;
+  try { out = std::stoi(tok); }
+  catch (...) { return false; }
+  return true;
+}
+
+bool
 ModelLoader::loadModel(const std::string& fileName, MeshComponent& outMesh) {
-	std::ifstream file(fileName);
+  // 0) validar existencia del archivo (NO fallback)
+  if (!fileExistsA(fileName.c_str())) {
+    OutputDebugStringA(("[ModelLoader] Not found: " + fileName + "\n").c_str());
+    return false;
+  }
 
-	if (!file.is_open()) {
-		ERROR("ModelLoader.cpp", "loadModel", "The file couldn't be opened.");
-		
-		return false;
-	}
+  std::ifstream file(fileName);
+  if (!file.is_open()) {
+    ERROR("ModelLoader.cpp", "loadModel", "The file couldn't be opened.");
+    return false;
+  }
 
-	std::string line;
-	std::vector<XMFLOAT3> tempVertexes;
-	std::vector<XMFLOAT2> tempUvs;
-	std::vector<XMFLOAT3> tempNormals;
-	std::map<std::string, int> uniqueVertexes;
+  // limpiar destino
+  outMesh.m_vertex.clear();
+  outMesh.m_index.clear();
+  outMesh.m_numVertex = 0;
+  outMesh.m_numIndex = 0;
 
-	while (std::getline(file, line)) {
-		std::stringstream streamLine(line);
-		std::string prefix;
-		streamLine >> prefix;
+  std::string line;
+  std::vector<XMFLOAT3> tempPos;
+  std::vector<XMFLOAT2> tempUV;
+  std::vector<XMFLOAT3> tempNrm;
+  std::map<std::string, int> uniqueVertex;
 
-		if (prefix == "vt") {
-			parseVec2(streamLine, tempUvs);
-		}
-		else if (prefix == "vn") {
-			parseVec3(streamLine, tempNormals);
-		}
-		else if (prefix == "v") {
-			parseVec3(streamLine, tempVertexes);
-		}
-		else if (prefix == "f") {
+  while (std::getline(file, line)) {
+    if (line.empty() || line[0] == '#') continue;
 
-			std::string chunk;
-			std::vector<int> faceIndexes;
+    std::stringstream ls(line);
+    std::string tag;
+    ls >> tag;
 
-			// For each vertex in the face (the entire line after 'f ')
-			while (streamLine >> chunk) {
-				
-				int finalIndex = 0;
+    if (tag == "v") {
+      XMFLOAT3 p; ls >> p.x >> p.y >> p.z; tempPos.push_back(p);
+    }
+    else if (tag == "vt") {
+      XMFLOAT2 uv; ls >> uv.x >> uv.y;     tempUV.push_back(uv);
+    }
+    else if (tag == "vn") {
+      XMFLOAT3 n; ls >> n.x >> n.y >> n.z; tempNrm.push_back(n);
+    }
+    else if (tag == "f") {
+      // recolectar tokens de la cara: v/t/n | v//n | v/t
+      std::vector<int> faceIdx;
 
-				if (uniqueVertexes.count(chunk)) {
-					// Vertex already exists, use the existing index
-					finalIndex = uniqueVertexes[chunk];
-				}
-				else {
+      std::string chunk;
+      while (ls >> chunk) {
+        int finalIndex = 0;
 
-					int posIdx, txtIdx, nrmIdx;
+        auto it = uniqueVertex.find(chunk);
+        if (it != uniqueVertex.end()) {
+          finalIndex = it->second;
+        }
+        else {
+          // parsear chunk
+          // soporta: v/t/n, v//n, v/t
+          int posIdx = -1, texIdx = -1, nrmIdx = -1;
 
-					// Extract position, texture, and normal indices from the line of the vertex data
-					std::stringstream ss_vertexData(chunk);
-					std::string idxData;
+          std::stringstream vs(chunk);
+          std::string first;
+          std::getline(vs, first, '/');
+          if (!first.empty()) { try { posIdx = std::stoi(first) - 1; } catch (...) { posIdx = -1; } }
 
-					std::getline(ss_vertexData, idxData, '/');
-					posIdx = std::stoi(idxData) - 1;
+          if (vs.peek() == '/') { // caso v//n
+            vs.get(); // consume '/'
+            std::string third;
+            std::getline(vs, third, '/');
+            if (!third.empty()) { try { nrmIdx = std::stoi(third) - 1; } catch (...) { nrmIdx = -1; } }
+          }
+          else {
+            // tenemos al menos v/...
+            std::string second;
+            std::getline(vs, second, '/'); // uv
+            if (!second.empty()) { try { texIdx = std::stoi(second) - 1; } catch (...) { texIdx = -1; } }
 
-					std::getline(ss_vertexData, idxData, '/');
-					txtIdx = std::stoi(idxData) - 1;
+            std::string third;
+            if (std::getline(vs, third, '/')) {
+              if (!third.empty()) { try { nrmIdx = std::stoi(third) - 1; } catch (...) { nrmIdx = -1; } }
+            }
+          }
 
-					std::getline(ss_vertexData, idxData, '/');
-					nrmIdx = std::stoi(idxData) - 1;
+          // validar índices
+          if (posIdx < 0 || posIdx >= (int)tempPos.size()) {
+            OutputDebugStringA("[ModelLoader] Bad position index in face.\n");
+            file.close();
+            return false; // NO fallback
+          }
 
-					SimpleVertex newVertex;
-					newVertex.Pos = tempVertexes[posIdx];
-					newVertex.Tex = tempUvs[txtIdx];
-					//newVertex.Norm = tempNormals[nrm_idx];
+          XMFLOAT3 P = tempPos[posIdx];
+          XMFLOAT2 T = { 0.f, 0.f };
+          if (texIdx >= 0 && texIdx < (int)tempUV.size()) T = tempUV[texIdx];
 
-					outMesh.m_vertex.push_back(newVertex);
+          // construir vértice
+          SimpleVertex v{};
+          v.Pos = P;
+          v.Tex = T;
+          // si agregas normales a tu Vertex/Shader, aquí asignas v.Norm
 
-					int newIndex = static_cast<int>(outMesh.m_vertex.size()) - 1;
-					uniqueVertexes[chunk] = newIndex;
+          outMesh.m_vertex.push_back(v);
+          finalIndex = (int)outMesh.m_vertex.size() - 1;
+          uniqueVertex[chunk] = finalIndex;
+        }
 
-					finalIndex = newIndex;
-				}
-				// Add the index to the temporal face vector
-				faceIndexes.push_back(finalIndex);
-			}
-			// Triangulate the face (assuming it's a quad or triangle)
-			if (faceIndexes.size() == 3) {
-				for (int idx : faceIndexes) {
-					outMesh.m_index.push_back(idx);
-				}
-			}
-			else if (faceIndexes.size() == 4) {
-				for (int i = 0; i < 3; i++) {
-					outMesh.m_index.push_back(faceIndexes[i]);
-				}
-				outMesh.m_index.push_back(faceIndexes[0]);
-				outMesh.m_index.push_back(faceIndexes[2]);
-				outMesh.m_index.push_back(faceIndexes[3]);
-			}
-		}
-	}
+        faceIdx.push_back(finalIndex);
+      }
 
-	outMesh.m_numVertex = static_cast<int>(outMesh.m_vertex.size());
-	outMesh.m_numIndex = static_cast<int>(outMesh.m_index.size());
+      // triangulación en abanico (n-gon -> tri-list)
+      if (faceIdx.size() < 3) {
+        OutputDebugStringA("[ModelLoader] face with <3 vertices ignored.\n");
+        continue;
+      }
+      for (size_t i = 1; i + 1 < faceIdx.size(); ++i) {
+        outMesh.m_index.push_back(faceIdx[0]);
+        outMesh.m_index.push_back(faceIdx[i]);
+        outMesh.m_index.push_back(faceIdx[i + 1]);
+      }
+    }
+  }
 
-	file.close();
+  outMesh.m_numVertex = (int)outMesh.m_vertex.size();
+  outMesh.m_numIndex = (int)outMesh.m_index.size();
 
-	return true;
+  file.close();
+
+  // Log rápido
+  char tmp[128];
+  sprintf_s(tmp, "[ModelLoader] %s -> Verts:%d Indices:%d\n",
+    fileName.c_str(), outMesh.m_numVertex, outMesh.m_numIndex);
+  OutputDebugStringA(tmp);
+
+  // si no cargó nada, falla explícito
+  if (outMesh.m_numVertex == 0 || outMesh.m_numIndex == 0) {
+    OutputDebugStringA("[ModelLoader] Empty mesh -> fail (NO fallback cube)\n");
+    return false;
+  }
+
+  return true;
 }
 
-void 
+void
 ModelLoader::parseVec2(std::stringstream& streamLine, std::vector<XMFLOAT2>& outVector) {
-	XMFLOAT2 uv;
-	streamLine >> uv.x >> uv.y;
-
-	outVector.push_back(uv);
+  XMFLOAT2 uv{};
+  streamLine >> uv.x >> uv.y;
+  outVector.push_back(uv);
 }
 
-void 
+void
 ModelLoader::parseVec3(std::stringstream& streamLine, std::vector<XMFLOAT3>& outVector) {
-	XMFLOAT3 pos;
-	streamLine >> pos.x >> pos.y >> pos.z;
-
-	outVector.push_back(pos);
+  XMFLOAT3 v{};
+  streamLine >> v.x >> v.y >> v.z;
+  outVector.push_back(v);
 }
