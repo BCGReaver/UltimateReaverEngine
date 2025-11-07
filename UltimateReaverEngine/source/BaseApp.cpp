@@ -126,24 +126,38 @@ HRESULT BaseApp::init() {
   return S_OK;
 }
 
-void BaseApp::update(float /*dt*/) {
-  // View / Projection
+void BaseApp::update(float dt) {
+  // --- tiempo acumulado para la rotación ---
+  static float angle = 0.0f;
+  angle += dt * XMConvertToRadians(45.0f); // velocidad: 45° por segundo
+
+  // --- View & Projection (coherentes con init: FOV = 60°, far = 500) ---
   cbNeverChanges.mView = XMMatrixTranspose(m_View);
   m_cbNeverChanges.update(m_deviceContext, nullptr, 0, nullptr, &cbNeverChanges, 0, 0);
 
-  m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4,
+  m_Projection = XMMatrixPerspectiveFovLH(
+    XMConvertToRadians(60.0f),
     static_cast<float>(m_window.m_width) / static_cast<float>(m_window.m_height),
-    0.01f, 100.0f);
+    0.01f, 500.0f
+  );
   cbChangesOnResize.mProjection = XMMatrixTranspose(m_Projection);
   m_cbChangeOnResize.update(m_deviceContext, nullptr, 0, nullptr, &cbChangesOnResize, 0, 0);
 
-  // Sin rotación ni tinte (puro OBJ)
+  // --- World: rotación del modelo ---
   m_vMeshColor = XMFLOAT4(1.f, 1.f, 1.f, 1.f);
-  m_World = XMMatrixIdentity();
+
+  // Si necesitas “levantar” el martillo o centrarlo, ajusta este translate.
+  // Ejemplo: subir 1.0f en Y: XMMatrixTranslation(0.f, 1.f, 0.f)
+  XMMATRIX rotation = XMMatrixRotationY(angle);
+  XMMATRIX translation = XMMatrixTranslation(0.f, 0.f, 0.f);
+
+  m_World = rotation * translation;
+
   cb.mWorld = XMMatrixTranspose(m_World);
   cb.vMeshColor = m_vMeshColor;
   m_cbChangesEveryFrame.update(m_deviceContext, nullptr, 0, nullptr, &cb, 0, 0);
 }
+
 
 void BaseApp::render() {
   float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
