@@ -1,85 +1,96 @@
-#pragma once
 /**
  * @file DeviceContext.h
- * @brief Wrapper chill del contexto inmediato de D3D11 para no estar llamando la API cruda a cada rato.
+ * @brief Aquí defino la clase DeviceContext, que se encarga de manejar el contexto de dibujo de Direct3D.
  *
  * @details
- * Este header es parte de **UltimateReaverEngine**. La idea es tener un lugar
- * donde centralizamos las llamadas típicas del pipeline (set shaders, buffers, samplers,
- * viewports, etc.) con validaciones básicas y nombres claritos.
+ *  Esta clase la uso para acceder a todas las funciones de renderizado de Direct3D 11.
+ *  Es la que realmente le da órdenes a la GPU: setear shaders, buffers, texturas, limpiar la pantalla y dibujar.
+ *  En pocas palabras, el `DeviceContext` es el que ejecuta todo lo que preparan las demás clases del motor.
  */
 
+#pragma once
 #include "Prerequisites.h"
 
  /**
   * @class DeviceContext
-  * @brief Envoltura del @c ID3D11DeviceContext (el “inmediato”) con helpers con validación.
+  * @brief Clase encargada de controlar el contexto de dispositivo de Direct3D 11.
   *
   * @details
-  * Este contexto es el que manda los comandos de dibujo y estados al GPU.
-  * Con esta clase evitas repetir código y reduces crashes por nullptrs,
-  * porque cada método valida parámetros antes de llamar a D3D11.
+  *  El DeviceContext es básicamente el “control remoto” que le da órdenes a la GPU.
+  *  Todo lo que implique dibujar, cambiar de shaders, limpiar buffers o actualizar constantes pasa por aquí.
+  *  Por eso, esta clase tiene un montón de funciones que envuelven las llamadas nativas de Direct3D,
+  *  pero de forma más limpia y centralizada.
   */
 class
   DeviceContext {
 public:
+
   /**
-   * @brief Ctor por defecto (no crea nada todavía).
+   * @brief Constructor por default.
+   *
+   * @details
+   *  No hago nada aquí todavía, ya que el contexto viene del `Device` y se asigna más adelante.
    */
   DeviceContext() = default;
 
   /**
-   * @brief Dtor por defecto (no libera solo; usa @ref destroy).
+   * @brief Destructor por default.
+   *
+   * @details
+   *  No libero nada aquí directamente, lo hago en `destroy()` para mantener control sobre el ciclo de vida.
    */
   ~DeviceContext() = default;
 
   /**
-   * @brief Inicializa el contexto del dispositivo.
+   * @brief Inicializo el contexto de dispositivo.
    *
    * @details
-   * Punto de entrada para enganchar el contexto inmediato creado junto al @c ID3D11Device.
-   * (En este proyecto lo asocia el @c SwapChain en su init).
+   *  Normalmente no lo creo desde cero, sino que lo obtengo del `Device` principal.
+   *  Pero este método está aquí por consistencia dentro del motor.
    */
   void
     init();
 
   /**
-   * @brief Update de mantenimiento (placeholder).
-   * @note Por si luego quieres stats, marcadores, etc.
+   * @brief Actualizo el estado del contexto si fuera necesario.
+   *
+   * @details
+   *  En la mayoría de los casos el contexto no cambia cada frame, pero dejo esto por estructura
+   *  y por si quiero agregar debug o sincronización más adelante.
    */
   void
     update();
 
   /**
-   * @brief Hook para render/debug (placeholder).
+   * @brief Ejecuto las operaciones de render.
+   *
+   * @details
+   *  Este método sería el que coordina todas las llamadas de dibujo dentro del frame.
+   *  En motores más grandes, desde aquí se lanzarían las draw calls.
    */
   void
     render();
 
   /**
-   * @brief Libera el contexto inmediato.
-   * @post @c m_deviceContext == nullptr.
+   * @brief Destruyo el contexto de dispositivo.
+   *
+   * @details
+   *  Suelto el puntero de `m_deviceContext` y limpio memoria.
+   *  Importante hacerlo antes de cerrar Direct3D.
    */
   void
     destroy();
 
-  // -----------------------------
-  // Setters de estado y recursos
-  // -----------------------------
+  // ====== Métodos para configurar el pipeline gráfico ======
 
   /**
-   * @brief Configura los viewports en la etapa de rasterización.
-   * @param NumViewports Cuántos viewports vas a setear.
-   * @param pViewports   Array con los @c D3D11_VIEWPORT.
+   * @brief Configuro los viewports activos en el rasterizer.
    */
   void
     RSSetViewports(unsigned int NumViewports, const D3D11_VIEWPORT* pViewports);
 
   /**
-   * @brief Enlaza SRVs (texturas) al Pixel Shader.
-   * @param StartSlot  Primer slot.
-   * @param NumViews   Cuántas vistas vas a setear.
-   * @param ppShaderResourceViews Array de @c ID3D11ShaderResourceView*.
+   * @brief Asigno recursos de textura al pixel shader.
    */
   void
     PSSetShaderResources(unsigned int StartSlot,
@@ -87,17 +98,13 @@ public:
       ID3D11ShaderResourceView* const* ppShaderResourceViews);
 
   /**
-   * @brief Define el Input Layout activo (formato de los vértices).
-   * @param pInputLayout Pointer al @c ID3D11InputLayout válido.
+   * @brief Asigno el input layout actual (estructura de los vértices).
    */
   void
     IASetInputLayout(ID3D11InputLayout* pInputLayout);
 
   /**
-   * @brief Asigna el Vertex Shader.
-   * @param pVertexShader    Shader compilado.
-   * @param ppClassInstances Instancias (HLSL classes), opcional.
-   * @param NumClassInstances Número de instancias.
+   * @brief Activo un vertex shader.
    */
   void
     VSSetShader(ID3D11VertexShader* pVertexShader,
@@ -105,10 +112,7 @@ public:
       unsigned int NumClassInstances);
 
   /**
-   * @brief Asigna el Pixel Shader.
-   * @param pPixelShader     Shader compilado.
-   * @param ppClassInstances Instancias (HLSL classes), opcional.
-   * @param NumClassInstances Número de instancias.
+   * @brief Activo un pixel shader.
    */
   void
     PSSetShader(ID3D11PixelShader* pPixelShader,
@@ -116,13 +120,7 @@ public:
       unsigned int NumClassInstances);
 
   /**
-   * @brief Copia datos desde CPU a un recurso en GPU (update rápido).
-   * @param pDstResource   Recurso destino.
-   * @param DstSubresource Subrecurso destino.
-   * @param pDstBox        Región (opcional, nullptr = todo).
-   * @param pSrcData       Datos fuente.
-   * @param SrcRowPitch    Bytes por fila.
-   * @param SrcDepthPitch  Bytes por capa.
+   * @brief Actualizo un recurso en la GPU con datos nuevos desde CPU.
    */
   void
     UpdateSubresource(ID3D11Resource* pDstResource,
@@ -133,12 +131,7 @@ public:
       unsigned int SrcDepthPitch);
 
   /**
-   * @brief Enlaza Vertex Buffers al IA (Input Assembler).
-   * @param StartSlot       Slot inicial.
-   * @param NumBuffers      Cuántos VBs.
-   * @param ppVertexBuffers Array de @c ID3D11Buffer*.
-   * @param pStrides        Strides (tamaño del vértice) por VB.
-   * @param pOffsets        Offsets iniciales por VB.
+   * @brief Asigno buffers de vértices al Input Assembler.
    */
   void
     IASetVertexBuffers(unsigned int StartSlot,
@@ -148,10 +141,7 @@ public:
       const unsigned int* pOffsets);
 
   /**
-   * @brief Enlaza el Index Buffer al IA.
-   * @param pIndexBuffer IB.
-   * @param Format       Formato (ej. @c DXGI_FORMAT_R16_UINT).
-   * @param Offset       Offset inicial.
+   * @brief Asigno el buffer de índices al Input Assembler.
    */
   void
     IASetIndexBuffer(ID3D11Buffer* pIndexBuffer,
@@ -159,10 +149,7 @@ public:
       unsigned int Offset);
 
   /**
-   * @brief Enlaza Samplers al Pixel Shader.
-   * @param StartSlot   Slot inicial.
-   * @param NumSamplers Cuántos samplers.
-   * @param ppSamplers  Array de @c ID3D11SamplerState*.
+   * @brief Activo los samplers para el pixel shader.
    */
   void
     PSSetSamplers(unsigned int StartSlot,
@@ -170,17 +157,13 @@ public:
       ID3D11SamplerState* const* ppSamplers);
 
   /**
-   * @brief Setea el Rasterizer State actual.
-   * @param pRasterizerState Estado creado con el device.
+   * @brief Configuro el estado del rasterizador (cómo se dibujan los triángulos).
    */
   void
     RSSetState(ID3D11RasterizerState* pRasterizerState);
 
   /**
-   * @brief Setea el Blend State en el Output Merger.
-   * @param pBlendState Estado de blending.
-   * @param BlendFactor Factor RGBA (mezcla constante).
-   * @param SampleMask  Máscara de muestras.
+   * @brief Configuro el estado de mezcla (blending) del pipeline.
    */
   void
     OMSetBlendState(ID3D11BlendState* pBlendState,
@@ -188,10 +171,7 @@ public:
       unsigned int SampleMask);
 
   /**
-   * @brief Enlaza Render Targets y Depth/Stencil al OM.
-   * @param NumViews            Cuántos RTVs.
-   * @param ppRenderTargetViews Array de RTVs.
-   * @param pDepthStencilView   DSV opcional.
+   * @brief Asigno los render targets activos.
    */
   void
     OMSetRenderTargets(unsigned int NumViews,
@@ -199,31 +179,20 @@ public:
       ID3D11DepthStencilView* pDepthStencilView);
 
   /**
-   * @brief Define la topología de primitivas (triángulos, líneas, etc.).
-   * @param Topology @c D3D11_PRIMITIVE_TOPOLOGY_*.
+   * @brief Defino la topología de los triángulos (por ejemplo, lista, strip, etc.).
    */
   void
     IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY Topology);
 
-  // -----------------------------
-  // Clears y constant buffers
-  // -----------------------------
-
   /**
-   * @brief Limpia un RT con un color.
-   * @param pRenderTargetView RTV válido.
-   * @param ColorRGBA         Color en RGBA (0..1).
+   * @brief Limpio un render target con un color específico.
    */
   void
     ClearRenderTargetView(ID3D11RenderTargetView* pRenderTargetView,
       const float ColorRGBA[4]);
 
   /**
-   * @brief Limpia un DSV (depth/stencil).
-   * @param pDepthStencilView Vista de profundidad/esténcil.
-   * @param ClearFlags        @c D3D11_CLEAR_DEPTH / @c D3D11_CLEAR_STENCIL (o ambos).
-   * @param Depth             Valor depth (0..1).
-   * @param Stencil           Valor stencil.
+   * @brief Limpio el depth stencil (profundidad y stencil buffer).
    */
   void
     ClearDepthStencilView(ID3D11DepthStencilView* pDepthStencilView,
@@ -232,10 +201,7 @@ public:
       UINT8 Stencil);
 
   /**
-   * @brief Enlaza constant buffers al VS.
-   * @param StartSlot        Slot inicial.
-   * @param NumBuffers       Cuántos buffers.
-   * @param ppConstantBuffers Array de @c ID3D11Buffer*.
+   * @brief Asigno constant buffers al vertex shader.
    */
   void
     VSSetConstantBuffers(unsigned int StartSlot,
@@ -243,25 +209,19 @@ public:
       ID3D11Buffer* const* ppConstantBuffers);
 
   /**
-   * @brief Enlaza constant buffers al PS.
-   * @param StartSlot        Slot inicial.
-   * @param NumBuffers       Cuántos buffers.
-   * @param ppConstantBuffers Array de @c ID3D11Buffer*.
+   * @brief Asigno constant buffers al pixel shader.
    */
   void
     PSSetConstantBuffers(unsigned int StartSlot,
       unsigned int NumBuffers,
       ID3D11Buffer* const* ppConstantBuffers);
 
-  // -----------------------------
-  // Draw calls
-  // -----------------------------
-
   /**
-   * @brief Lanza un draw con índices (lo más común).
-   * @param IndexCount         Total de índices a dibujar.
-   * @param StartIndexLocation Desde qué índice arrancas.
-   * @param BaseVertexLocation Offset base para los vértices.
+   * @brief Ejecuto un dibujo indexado en GPU.
+   *
+   * @details
+   *  Esta es la llamada clásica de dibujo: usa el buffer de índices para renderizar los triángulos.
+   *  Aquí es donde realmente se pinta todo en pantalla.
    */
   void
     DrawIndexed(unsigned int IndexCount,
@@ -269,9 +229,7 @@ public:
       int BaseVertexLocation);
 
 public:
-  /**
-   * @brief Contexto inmediato de D3D11 (el que manda las órdenes al GPU).
-   * @details Queda válido tras @ref init y se libera en @ref destroy.
-   */
+
+  /// @brief Puntero al contexto de dispositivo de Direct3D, el que realmente manda los comandos a la GPU.
   ID3D11DeviceContext* m_deviceContext = nullptr;
 };

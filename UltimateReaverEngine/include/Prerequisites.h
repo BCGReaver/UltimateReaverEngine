@@ -1,19 +1,16 @@
-#pragma once
 /**
  * @file Prerequisites.h
- * @brief Todo lo básico que usa el motor (UltimateReaverEngine): includes de Win/DirectX, macros útiles y structs compartidos.
+ * @brief En este header junto todo lo básico que necesito del proyecto: includes, macros, structs y enums.
  *
  * @details
- * Aquí juntamos:
- * - Librerías estándar y de Windows.
- * - Headers de DirectX 11 (D3D11, D3DX11, HLSL compiler).
- * - Macros para liberar recursos COM y loguear cosas rápido.
- * - Structs típicos para los constant buffers y el layout de vértice.
+ *  Aquí centralizo las dependencias de Windows y Direct3D 11 para no estar repitiendo en cada archivo.
+ *  También dejo algunos macros de utilidad (como `SAFE_RELEASE`) y constantes para loggear rápido.
+ *  Además, defino los structs de vértices y los constant buffers que uso con los shaders,
+ *  y enums para distinguir tipos de archivos y tipos de shader. Todo directo y listo para reusar.
  */
 
- // -----------------------------
- // Librerías STD / Windows
- // -----------------------------
+#pragma once
+
 #include <string>
 #include <sstream>
 #include <vector>
@@ -22,40 +19,33 @@
 #include <thread>
 #include <map>
 
-// -----------------------------
-// DirectX 11
-// -----------------------------
 #include <d3d11.h>
 #include <d3dx11.h>
 #include <d3dcompiler.h>
 
-// Recursos (iconos, ids, etc.)
 #include "Resource.h"
 #include "resource.h"
 
-/**
- * @def SAFE_RELEASE(x)
- * @brief Libera un recurso COM de manera segura y lo deja en nullptr.
- *
- * @param x Puntero COM (por ejemplo, @c ID3D11Buffer*, @c ID3D11Texture2D*).
- *
- * @note Esta macro chequea @p x por nullptr antes de llamar @c Release().
- * Úsala siempre que termines con un recurso de DirectX.
- */
-#define SAFE_RELEASE(x) if(x != nullptr) x->Release(); x = nullptr;
-
  /**
-  * @def MESSAGE(classObj, method, state)
-  * @brief Log de mensajito simple al OutputDebug con el estado de creación/acción.
-  *
-  * @param classObj Nombre de la clase (string o literal wide).
-  * @param method   Nombre del método que reporta.
-  * @param state    Texto libre para describir qué pasó (por ejemplo, "OK", "created", etc.).
+  * @brief Macro de ayuda para liberar interfaces de COM de forma segura.
   *
   * @details
-  * Se imprime algo tipo: `Clase::metodo : [CREATION OF RESOURCE : OK]`
-  * Útil para debug rápido sin ensuciar consola.
+  *  Yo lo uso para evitar memory leaks en GPU/COM. Si el puntero no es null, llamo `Release()`
+  *  y luego lo dejo en `nullptr`. Me ahorro escribir el if a cada rato.
   */
+#define SAFE_RELEASE(x) if(x != nullptr) x->Release(); x = nullptr;
+
+  /**
+   * @brief Macro para loguear mensajes de creación de recursos en el OutputDebug.
+   *
+   * @param classObj  Nombre de la clase (texto wide).
+   * @param method    Método donde estoy logueando.
+   * @param state     Estado o mensaje corto (por ejemplo: "OK" o "FAILED").
+   *
+   * @details
+   *  Yo lo uso para tener trazas rápidas cuando creo cosas de D3D (buffers, shaders, etc.)
+   *  y así ver en el Output de Visual Studio cómo va el flujo.
+   */
 #define MESSAGE( classObj, method, state )   \
 {                                            \
    std::wostringstream os_;                  \
@@ -64,18 +54,17 @@
    OutputDebugStringW( os_.str().c_str() );  \
 }
 
-  /**
-   * @def ERROR(classObj, method, errorMSG)
-   * @brief Loguea un error en el OutputDebug con formato fijo.
-   *
-   * @param classObj Nombre de la clase (wide).
-   * @param method   Nombre del método (wide).
-   * @param errorMSG Mensaje de error ya en wide o literal L"...".
-   *
-   * @details
-   * No tira excepción ni corta la app, solo deja el mensaje en el debugger.
-   * Ej: `ERROR : Device::CreateBuffer : descripción...`
-   */
+   /**
+    * @brief Macro para loguear errores en el OutputDebug de forma segura.
+    *
+    * @param classObj  Nombre de la clase (wide).
+    * @param method    Método donde ocurrió el error.
+    * @param errorMSG  Mensaje descriptivo del error.
+    *
+    * @details
+    *  En caso de que algo truene, lo mando a OutputDebug. Envuelvo en try/catch por si el stream falla.
+    *  Así no se me cae el programa por intentar loguear un error, sería el colmo.
+    */
 #define ERROR(classObj, method, errorMSG)                     \
 {                                                             \
     try {                                                     \
@@ -88,82 +77,80 @@
     }                                                         \
 }
 
-   // ============================================================================
-   // Estructuras compartidas (coinciden con lo que espera el shader)
-   // ============================================================================
-
-   /**
-    * @struct SimpleVertex
-    * @brief Layout de vértice básico: posición y UV.
-    *
-    * @var SimpleVertex::Pos
-    * Posición del vértice en espacio del objeto (x,y,z).
-    *
-    * @var SimpleVertex::Tex
-    * Coordenadas de textura (u,v) en [0..1].
-    */
+    /**
+     * @struct SimpleVertex
+     * @brief Vértice básico con posición y coordenadas de textura.
+     *
+     * @details
+     *  Este lo uso para geometría sencilla: posición en 3D y UV para texturas.
+     *  Perfecto para probar shaders o dibujar modelos simples.
+     */
 struct SimpleVertex {
+  /// @brief Posición del vértice en espacio 3D.
   XMFLOAT3 Pos;
+  /// @brief Coordenadas de textura (u, v).
   XMFLOAT2 Tex;
 };
 
 /**
  * @struct CBNeverChanges
- * @brief Constant buffer para cosas que casi no cambian (ej: View).
+ * @brief Constant buffer para datos que casi nunca cambian.
  *
- * @var CBNeverChanges::mView
- * Matriz de vista (cámara), transpuesta cuando se manda al shader.
+ * @details
+ *  Aquí meto la vista (mView). Normalmente la cargo una vez y rara vez la toco.
  */
 struct CBNeverChanges {
+  /// @brief Matriz de vista (cámara).
   XMMATRIX mView;
 };
 
 /**
  * @struct CBChangeOnResize
- * @brief Constant buffer pensado para cuando cambias tamaño de ventana.
+ * @brief Constant buffer para cosas que cambian cuando redimensiono la ventana.
  *
- * @var CBChangeOnResize::mProjection
- * Matriz de proyección (perspectiva/ortográfica), transpuesta para el shader.
+ * @details
+ *  Al cambiar el tamaño de la ventana, recalculo la proyección y la guardo aquí.
  */
 struct CBChangeOnResize {
+  /// @brief Matriz de proyección (perspectiva u ortográfica).
   XMMATRIX mProjection;
 };
 
 /**
  * @struct CBChangesEveryFrame
- * @brief Constant buffer que sí se actualiza cada frame.
+ * @brief Constant buffer para datos que sí cambian cada frame.
  *
- * @var CBChangesEveryFrame::mWorld
- * Matriz world (transform del objeto), transpuesta.
- *
- * @var CBChangesEveryFrame::vMeshColor
- * Color del mesh (RGBA) para tintar o debuggear rápido.
+ * @details
+ *  Aquí pongo el mundo (mWorld) y un color por malla, ideal para animaciones o efectos por objeto.
  */
 struct CBChangesEveryFrame {
+  /// @brief Matriz de mundo (transformación del objeto).
   XMMATRIX mWorld;
+  /// @brief Color del mesh (RGBA), útil para tintes o debug.
   XMFLOAT4 vMeshColor;
 };
 
 /**
  * @enum ExtensionType
- * @brief Tipos de archivo soportados al cargar texturas desde disco.
+ * @brief Tipos de extensión de textura que manejo al cargar.
  *
- * @var ExtensionType::DDS
- * Formato DDS (ideal para GPU, soporta mipmaps y compresión).
- *
- * @var ExtensionType::PNG
- * PNG con alpha (común para UI, sprites, etc.).
- *
- * @var ExtensionType::JPG
- * JPG (ligero, sin alpha, ojo con artefactos).
+ * @details
+ *  Lo uso para decidir el pipeline de carga (DDS nativo, o imágenes como PNG/JPG).
  */
 enum ExtensionType {
-  DDS = 0,
-  PNG = 1,
-  JPG = 2
+  DDS = 0, ///< Textura DDS (ideal para GPU, soporta compresión/ mipmaps).
+  PNG = 1, ///< Imagen PNG (sin pérdida, buena para UI).
+  JPG = 2  ///< Imagen JPG (con pérdida, ligera para difusas).
 };
 
+/**
+ * @enum ShaderType
+ * @brief Tipo de shader que quiero crear/usar en el pipeline.
+ *
+ * @details
+ *  Por ahora manejo vertex y pixel shaders. Si luego agrego geometry/hull/domain, los extiendo aquí.
+ */
 enum ShaderType {
-  VERTEX_SHADER = 0, ///< Vertex shader type.
-  PIXEL_SHADER = 1   ///< Pixel shader type.
+  VERTEX_SHADER = 0, ///< Vertex Shader (transforma vértices).
+  PIXEL_SHADER = 1  ///< Pixel Shader (calcula el color final).
 };

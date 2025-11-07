@@ -1,3 +1,13 @@
+﻿/**
+ * @file SwapChain.h
+ * @brief Aquí defino la clase SwapChain, que básicamente es la encargada de manejar los buffers de pantalla.
+ *
+ * @details
+ *  Esta clase la uso para conectar el render del motor con la ventana del sistema operativo.
+ *  El swap chain es el que se encarga de presentar lo que dibujo en la GPU hacia la pantalla.
+ *  Aquí manejo la inicialización, actualización y el clásico “present” que intercambia los buffers.
+ */
+
 #pragma once
 #include "Prerequisites.h"
 
@@ -7,37 +17,50 @@ class Window;
 class Texture;
 
 /**
- * @file SwapChain.h
- * @brief Wrapper del swap chain de DXGI para presentar en ventana dentro de **UltimateReaverEngine**.
+ * @class SwapChain
+ * @brief Administro el ciclo de presentación de imágenes en pantalla (double buffering).
  *
  * @details
- * Este compa maneja el ciclo de buffers (front/back) para que lo que renders se vea en pantalla.
- * Aqu� armamos el swap chain, checamos MSAA, agarramos el back buffer y luego presentamos.
- * Todo en plan directo y legible, con camelCase y m_ para miembros.
+ *  La idea del swap chain es sencilla: tengo un buffer donde dibujo (back buffer)
+ *  y otro que está en pantalla (front buffer). Cada frame, los intercambio con `present()`.
+ *  Esta clase me ayuda a mantener ese proceso encapsulado y limpio, sin tener que tocar
+ *  directamente las APIs de DXGI.
  */
 class
   SwapChain {
 public:
+
   /**
-   * @brief Ctor por defecto (no crea nada todav�a).
+   * @brief Constructor por default.
+   *
+   * @details
+   *  No hago nada aquí porque la creación real del swap chain se hace en `init()`.
+   *  Prefiero mantener el constructor liviano para evitar inicializaciones forzadas.
    */
   SwapChain() = default;
 
   /**
-   * @brief Dtor por defecto (recursos se sueltan con destroy()).
+   * @brief Destructor por default.
+   *
+   * @details
+   *  No libero nada aquí directamente, lo hago en `destroy()`
+   *  para tener control total del ciclo de vida del objeto.
    */
   ~SwapChain() = default;
 
   /**
-   * @brief Crea el swap chain y saca el back buffer asociado a una ventana.
+   * @brief Inicializo el swap chain conectándolo con la ventana del motor.
    *
-   * @param device         Dispositivo D3D11 (con este se crean las cosas).
-   * @param deviceContext  Contexto del dispositivo (para binds y state).
-   * @param backBuffer     Textura donde cae el render (el back buffer real).
-   * @param window         Ventana donde se va a presentar todo.
-   * @return S_OK si todo fino; HRESULT de error si truena.
+   * @param device          Dispositivo de Direct3D (lo uso para crear el swap chain).
+   * @param deviceContext   Contexto del dispositivo, necesario para operaciones gráficas.
+   * @param backBuffer      Referencia al buffer donde se dibuja (el back buffer).
+   * @param window          Ventana destino donde se mostrará el contenido.
    *
-   * @post Si regresa S_OK, m_swapChain != nullptr y el backBuffer ya est� listo.
+   * @return HRESULT        `S_OK` si se creó correctamente, o código de error si algo falló.
+   *
+   * @details
+   *  Aquí creo el swap chain usando las interfaces de DXGI (Device, Adapter, Factory).
+   *  Básicamente dejo todo configurado para que la GPU pueda presentar frames en la ventana.
    */
   HRESULT
     init(Device& device,
@@ -46,58 +69,72 @@ public:
       Window window);
 
   /**
-   * @brief Hook para actualizar ajustes del swap chain (resize/MSAA, etc).
-   * @note Por ahora es un placeholder sin l�gica.
+   * @brief Actualizo el estado del swap chain.
+   *
+   * @details
+   *  Normalmente no hace mucho cada frame, pero dejo el método por consistencia
+   *  (en caso de querer sincronizar opciones o manejar cambios de ventana dinámica).
    */
   void
     update();
 
   /**
-   * @brief Hook de render del swap chain (�til para debug/sync si lo necesitas).
-   * @note De momento no hace nada.
+   * @brief Renderizo el contenido (a nivel swap chain).
+   *
+   * @details
+   *  En esta etapa normalmente no dibujo nada, pero la incluyo para mantener
+   *  el flujo clásico del motor (update → render → present). Aquí podría ir
+   *  cualquier cosa relacionada con postprocesado o debug visual del swap chain.
    */
   void
     render();
 
   /**
-   * @brief Libera todas las interfaces relacionadas (swap chain, factory, etc.).
+   * @brief Libero los recursos asociados al swap chain.
    *
-   * @post m_swapChain == nullptr y las DXGI interfaces quedan en nullptr.
+   * @details
+   *  Cuando ya no necesito el swap chain (por ejemplo, al cerrar la app),
+   *  libero las interfaces y dejo todo limpio para evitar leaks.
    */
   void
     destroy();
 
   /**
-   * @brief Presenta el back buffer en pantalla (el famoso .Present()).
+   * @brief Presento el frame actual en pantalla.
    *
-   * @note Si quieres V-Sync, ese par�metro se setea al hacer Present en el .cpp.
+   * @details
+   *  Esta es la parte clave: aquí intercambio el back buffer con el front buffer
+   *  para que lo que dibujé se vea realmente en la ventana.
+   *  Es la función que hace que la imagen “salte” a pantalla cada frame.
    */
   void
     present();
 
 public:
-  /** @brief Handler principal del swap chain (DXGI). */
+
+  /// @brief Puntero principal al swap chain de DXGI, donde se manejan los buffers.
   IDXGISwapChain* m_swapChain = nullptr;
 
-  /** @brief Tipo de driver que se termin� usando (hardware, warp, ref). */
+  /// @brief Tipo de driver de Direct3D (hardware, software, referencia, etc).
   D3D_DRIVER_TYPE m_driverType = D3D_DRIVER_TYPE_NULL;
 
 private:
-  /** @brief Feature level al que qued� el device (ej. 11.0). */
+
+  /// @brief Nivel de características de Direct3D (por defecto uso 11.0).
   D3D_FEATURE_LEVEL m_featureLevel = D3D_FEATURE_LEVEL_11_0;
 
-  /** @brief Cu�ntas muestras por p�xel para MSAA (4 = 4x). */
+  /// @brief Cantidad de samples para MSAA (antialiasing).
   unsigned int m_sampleCount;
 
-  /** @brief Niveles de calidad disponibles para ese MSAA. */
+  /// @brief Nivel de calidad para MSAA (0 si no se usa).
   unsigned int m_qualityLevels;
 
-  /** @brief Interfaz DXGI �vista� de device (para llegar a adapter/factory). */
+  /// @brief Dispositivo DXGI, lo uso para obtener adaptadores y crear la fábrica.
   IDXGIDevice* m_dxgiDevice = nullptr;
 
-  /** @brief El adapter real (tu GPU) visto desde DXGI. */
+  /// @brief Adaptador de DXGI (la GPU física o virtual que estoy usando).
   IDXGIAdapter* m_dxgiAdapter = nullptr;
 
-  /** @brief Factory de DXGI (sirve para crear el swap chain). */
+  /// @brief Fábrica DXGI, necesaria para crear el swap chain.
   IDXGIFactory* m_dxgiFactory = nullptr;
 };

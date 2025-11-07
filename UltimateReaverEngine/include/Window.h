@@ -1,95 +1,113 @@
+/**
+ * @file Window.h
+ * @brief Esta clase la hice para manejar todo lo relacionado con la ventana del motor.
+ *
+ * @details
+ *  Aquí encapsulo todo lo que tiene que ver con crear, actualizar y destruir una ventana de Windows.
+ *  Lo hago así para no tener que estar repitiendo el mismo código cada vez que arranco un proyecto.
+ *  Básicamente, esta clase se encarga de armar la ventana, mantenerla viva mientras corre el juego,
+ *  y cerrarla cuando ya no se necesita.
+ */
+
 #pragma once
 #include "Prerequisites.h"
 
-/**
- * @file Window.h
- * @brief Ventana Win32 que usamos para arrancar Direct3D y dibujar.
- *
- * @details
- * Esta clase arma una ventana clásica de Windows y guarda sus datos básicos
- * (HWND, ancho, alto). La idea es que sea un wrapper sencillo para el
- * proyecto **UltimateReaverEngine**.
- *
- * Estilo rápido:
- * - camelCase para métodos (init, update, render, destroy).
- * - Miembros privados con prefijo m_.
- * - Indentación de 2 espacios.
- */
-class
-  Window {
+ /**
+  * @class Window
+  * @brief Clase que se encarga de manejar la ventana del motor.
+  *
+  * @details
+  *  Yo diseñé esta clase para tener todo lo del sistema de ventanas centralizado.
+  *  Así es más fácil controlarla sin andar peleándome con WinAPI en cada proyecto.
+  *  Aquí solo tengo lo esencial: crear, actualizar, renderizar (aunque más simbólico),
+  *  y destruir.
+  */
+class Window {
 public:
+
   /**
-   * @brief Ctor por default (no hace nada hasta que llames a init()).
+   * @brief Constructor por default.
+   *
+   * @details
+   *  No hago nada todavía aquí porque la ventana se crea después con `init()`.
+   *  Básicamente solo existe para tener una instancia lista.
    */
   Window() = default;
 
   /**
-   * @brief Dtor por default (si quieres liberar algo, hazlo en destroy()).
+   * @brief Destructor por default.
+   *
+   * @details
+   *  No destruyo nada aquí porque eso se hace de forma controlada en `destroy()`.
+   *  Pero igual lo dejo declarado para mantener el orden.
    */
   ~Window() = default;
 
   /**
-   * @brief Crea y muestra la ventana de la app.
+   * @brief Inicializo la ventana con los parámetros básicos.
    *
-   * @param hInstance  Handle de instancia que te manda WinMain.
-   * @param nCmdShow   Cómo mostrar la ventana (normal, maximizada, etc.).
+   * @param hInstance  Instancia principal del programa.
+   * @param nCmdShow   Modo en el que se va a mostrar la ventana.
    * @param wndproc    Procedimiento de ventana (callback para mensajes).
-   * @return HRESULT   S_OK si todo ok; algún código de error si falla.
+   *
+   * @return HRESULT   Devuelve S_OK si todo salió bien, o un código de error si algo falló.
    *
    * @details
-   * Registra la clase de ventana, crea el HWND, hace Show/Update y calcula
-   * el tamaño del cliente (para m_width/m_height).
+   *  Aquí básicamente creo la ventana, la registro, y defino su tamaño.
+   *  Este método se encarga de dejar todo listo para que la ventana aparezca.
    */
   HRESULT
     init(HINSTANCE hInstance, int nCmdShow, WNDPROC wndproc);
 
   /**
-   * @brief Lógica por frame de la ventana (si necesitas hacer algo aquí).
+   * @brief Actualizo la ventana.
+   *
+   * @details
+   *  Aquí normalmente procesaría los mensajes del sistema (teclas, clicks, etc).
+   *  La idea es mantener la ventana viva y que el motor no se congele.
    */
   void
     update();
 
   /**
-   * @brief Render por frame (normalmente vacío, el render “real” va en la app).
+   * @brief Renderizo el contenido de la ventana.
+   *
+   * @details
+   *  En este punto no dibujo nada directamente, pero dejo el método
+   *  porque me sirve para mantener un flujo ordenado dentro del motor.
    */
   void
     render();
 
   /**
-   * @brief Limpieza de recursos propios de la ventana (si aplica).
+   * @brief Destruyo la ventana y libero sus recursos.
+   *
+   * @details
+   *  Cuando ya no necesito la ventana, llamo a este método para cerrarla bien
+   *  y limpiar todo lo que haya quedado asignado.
    */
   void
     destroy();
 
 public:
-  /**
-   * @brief Handle de la ventana (lo usamos para crear el swap chain).
-   */
+
+  /// @brief Handle de la ventana, aquí se guarda el identificador principal (HWND).
   HWND m_hWnd = nullptr;
 
-  /**
-   * @brief Ancho del área de cliente (en píxeles).
-   */
+  /// @brief Ancho de la ventana en píxeles.
   unsigned int m_width;
 
-  /**
-   * @brief Alto del área de cliente (en píxeles).
-   */
+  /// @brief Alto de la ventana en píxeles.
   unsigned int m_height;
 
 private:
-  /**
-   * @brief Instancia del proceso, la guardamos para registrar la clase.
-   */
+
+  /// @brief Instancia principal de la aplicación, la uso para crear la ventana.
   HINSTANCE m_hInst = nullptr;
 
-  /**
-   * @brief Rect de cliente, lo usamos para calcular ancho/alto.
-   */
+  /// @brief Rectángulo de la ventana (sirve para calcular el área cliente y cosas así).
   RECT m_rect;
 
-  /**
-   * @brief Título de la ventana (mostrar en la barra de título).
-   */
+  /// @brief Nombre que aparece en la barra de título de la ventana.
   std::string m_windowName = "UltimateReaverEngine";
 };

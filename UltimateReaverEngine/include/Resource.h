@@ -1,33 +1,56 @@
+/**
+ * @file Resource.h
+ * @brief Archivo donde se definen los identificadores (IDs) de los recursos de la app.
+ *
+ * @details
+ *  Este archivo lo uso para asignar nombres simbólicos a los recursos del proyecto.
+ *  Por ejemplo, íconos, menús, cuadros de diálogo, botones, etc.
+ *  Es lo típico de los proyectos Win32: aquí simplemente se guardan las constantes
+ *  que usa el sistema para referenciar los recursos.
+ */
+
 #pragma once
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by UltimateReaverEngine.rc
-//
-// Este archivo define los IDs de recursos usados en la app (ventana, íconos, diálogos, etc).
-// Básicamente aquí se guardan las constantes que luego usamos en el engine para referirnos
-// a assets o elementos de UI sin tener que poner números mágicos en el código.
 
-#define IDS_APP_TITLE            103   ///< Título de la aplicación.
-#define IDR_MAINFRAME            128   ///< Frame principal.
-#define IDD_TUTORIAL1_DIALOG     102   ///< ID para el diálogo de Tutorial1.
-#define IDD_ABOUTBOX             103   ///< ID para el AboutBox.
-#define IDM_ABOUT                104   ///< Menú: "Acerca de".
-#define IDM_EXIT                 105   ///< Menú: "Salir".
-#define IDI_TUTORIAL1            107   ///< Ícono principal de la app.
-#define IDI_SMALL                108   ///< Ícono pequeño (barra de título, etc).
-#define IDC_TUTORIAL1            109   ///< Cursor o control asociado.
-#define IDC_MYICON               2     ///< Otro ícono/cursor custom.
+ /// @brief Título principal de la aplicación (nombre que aparece en la barra superior).
+#define IDS_APP_TITLE            103   
 
-// Evita redefinir IDC_STATIC si ya viene de algún header del SDK.
+/// @brief Identificador del frame principal (la ventana principal del programa).
+#define IDR_MAINFRAME            128   
+
+/// @brief ID del diálogo principal del tutorial.
+#define IDD_TUTORIAL1_DIALOG     102   
+
+/// @brief ID del cuadro de “Acerca de…” (About Box).
+#define IDD_ABOUTBOX             103   
+
+/// @brief ID del comando del menú para abrir el About Box.
+#define IDM_ABOUT                104   
+
+/// @brief ID del comando del menú para salir de la aplicación.
+#define IDM_EXIT                 105   
+
+/// @brief ID del ícono grande de la aplicación.
+#define IDI_TUTORIAL1            107   
+
+/// @brief ID del ícono pequeño de la aplicación (por ejemplo, el que sale en la barra de tareas).
+#define IDI_SMALL                108   
+
+/// @brief Identificador general del control principal de la app.
+#define IDC_TUTORIAL1            109   
+
+/// @brief Identificador del ícono del programa (usado por algunos menús o diálogos).
+#define IDC_MYICON               2     
+
+
 #ifndef IDC_STATIC
+/// @brief ID genérico que se usa para elementos estáticos en los diálogos.
 #define IDC_STATIC               -1
 #endif
 
-// Next default values for new objects
-// Estas macros las usa Visual Studio para asignar automáticamente
-// nuevos IDs cuando creas recursos desde el diseñador.
+
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
+/// @brief Configuración por defecto que usa Visual Studio cuando genera recursos nuevos.
 #define _APS_NO_MFC              130
 #define _APS_NEXT_RESOURCE_VALUE 129
 #define _APS_NEXT_COMMAND_VALUE  32771
