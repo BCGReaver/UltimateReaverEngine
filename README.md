@@ -37,3 +37,13 @@ Base DirectX 11 minimalista para prácticas de Gráficas Computacionales 3D, con
 
    // Asigna textura (JPG/PNG/DDS)
    m_textureCube.init(m_device, "miTex", ExtensionType::JPG);
+
+
+---
+
+## 📘 Y luego, enlázalo desde tu README
+Dentro del `README.md`, agrega una línea como esta donde hables del flujo o la arquitectura:
+
+```markdown
+## Diagrama del pipeline
+Puedes consultar el flujo completo de inicialización y renderizado en [PIPELINE.md](PIPELINE.md).
