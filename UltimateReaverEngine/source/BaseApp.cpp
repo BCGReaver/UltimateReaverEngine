@@ -98,20 +98,24 @@ HRESULT BaseApp::init() {
   if (FAILED(hr = m_cbChangesEveryFrame.init(m_device, sizeof(CBChangesEveryFrame)))) return hr;
 
   // Textura y sampler (temporal)
-  if (FAILED(hr = m_textureCube.init(m_device, "seafloor", ExtensionType::DDS))) return hr;
+  if (FAILED(hr = m_textureCube.init(m_device, "thor color", ExtensionType::JPG))) return hr;
   if (FAILED(hr = m_samplerState.init(m_device))) return hr;
 
   // Matrices base
   m_World = XMMatrixIdentity();
-  XMVECTOR Eye = XMVectorSet(0.0f, 3.0f, -6.0f, 0.0f);
-  XMVECTOR At = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+  // Alejar más la cámara para ver el martillo completo
+  XMVECTOR Eye = XMVectorSet(0.0f, 8.0f, -18.0f, 0.0f);
+  XMVECTOR At = XMVectorSet(0.0f, 3.0f, 0.0f, 0.0f);
   XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
   m_View = XMMatrixLookAtLH(Eye, At, Up);
 
+
   cbNeverChanges.mView = XMMatrixTranspose(m_View);
-  m_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV4,
-    static_cast<float>(m_window.m_width) / static_cast<float>(m_window.m_height),
-    0.01f, 100.0f);
+  m_Projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(60.0f),
+    m_window.m_width / (FLOAT)m_window.m_height,
+    0.01f,
+    500.0f);
+
   cbChangesOnResize.mProjection = XMMatrixTranspose(m_Projection);
 
   // Log de conteos del OBJ
