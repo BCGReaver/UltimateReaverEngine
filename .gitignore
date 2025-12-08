@@ -416,3 +416,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+UltimateReaverEngine/lib/fbxlibs/alembic-mt.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-md.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-mt.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-mt.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-md.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-mt.lib
+UltimateReaverEngine/lib/fbxlibs/libfbxsdk-md.lib
+UltimateReaverEngine/lib/fbxlibs/alembic-mt.lib
