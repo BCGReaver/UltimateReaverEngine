@@ -1,11 +1,12 @@
 ﻿/**
  * @file BaseApp.h
- * @brief Aquí defino la clase BaseApp, que funciona como el punto base de ejecución del motor.
+ * @brief Aquí defino la clase BaseApp, que es básicamente el “núcleo” de mi motor.
  *
  * @details
- *  Esta clase es la que maneja todo el ciclo de vida del programa: inicializa Direct3D, crea la ventana,
- *  actualiza la escena, la renderiza y destruye todo al final.
- *  Básicamente, es el “main” del motor, pero encapsulado en una clase ordenada y modular.
+ *  Esta clase engloba todo el ciclo de vida de mi aplicación: inicialización,
+ *  actualización, render y destrucción. Aquí es donde se crea la ventana,
+ *  el dispositivo D3D11, el swap chain y todo lo necesario para mostrar modelos
+ *  y también usar la interfaz gráfica del editor (ImGui).
  */
 
 #pragma once
@@ -22,166 +23,146 @@
 #include "MeshComponent.h"
 #include "Buffer.h"
 #include "SamplerState.h"
-#include "ModelLoader.h"
+#include "Model3D.h"
+#include "ECS/Actor.h"
+#include "UserInterface.h"
 
  /**
   * @class BaseApp
-  * @brief Clase principal del motor que maneja la inicialización, el ciclo de juego y la renderización.
+  * @brief Clase principal que maneja la ejecución general de mi motor gráfico.
   *
   * @details
-  *  Esta clase la uso como base para cualquier aplicación que haga con el motor.
-  *  Aquí se junta todo: la ventana, los dispositivos de Direct3D, los shaders, las texturas,
-  *  y hasta el modelo que cargo para renderizar.
-  *  Contiene el clásico ciclo de vida de una app de render:
-  *  1. `init()` → inicializa todo
-  *  2. `update()` → actualiza la lógica
-  *  3. `render()` → dibuja la escena
-  *  4. `destroy()` → limpia los recursos
+  *  Aquí voy controlando los distintos subsistemas:
+  *  - Render (D3D11)
+  *  - Ventana
+  *  - Swap chain
+  *  - Shaders
+  *  - Texturas
+  *  - Modelos y Actores
+  *  - Interfaz de usuario con ImGui
+  *
+  *  Esta clase sirve como punto de entrada y también como contenedor principal
+  *  para todos los objetos centrales del motor.
   */
 class
   BaseApp {
 public:
 
   /**
-   * @brief Constructor principal de la aplicación base.
-   *
-   * @param hInst     Instancia principal del programa (la que recibe WinMain).
-   * @param nCmdShow  Modo de visualización de la ventana.
-   *
-   * @details
-   *  Aquí guardo los valores de instancia y configuro el entorno de inicio del motor.
-   *  También puedo crear la ventana y preparar todo para `init()`.
+   * @brief Constructor por defecto.
+   * @details No hago nada aquí, prefiero inicializar todo en `init()`.
    */
-  BaseApp(HINSTANCE hInst, int nCmdShow);
+  BaseApp() = default;
 
   /**
-   * @brief Destructor de la clase.
-   *
-   * @details
-   *  Llamo a `destroy()` automáticamente para asegurarme de que se limpien los recursos.
+   * @brief Destructor de la aplicación.
+   * @details Aquí llamo a destroy() para limpiar recursos.
    */
   ~BaseApp() { destroy(); }
 
   /**
-   * @brief Función principal que ejecuta la aplicación.
+   * @brief Ejecuta el loop principal de la aplicación.
    *
-   * @param hInst     Instancia del programa.
-   * @param nCmdShow  Modo de visualización.
-   *
-   * @return int      Código de salida de la app.
+   * @param hInst     Instancia del programa
+   * @param nCmdShow  Modo de visualización
+   * @return int      Código de salida
    *
    * @details
-   *  Esta función inicia el loop principal del motor: inicializa, actualiza, renderiza y escucha eventos.
-   *  Es el equivalente al `WinMain`, pero encapsulado dentro de la clase.
+   *  Aquí corro todo el ciclo del motor:
+   *  - Inicialización
+   *  - Mensajes de Windows
+   *  - Update
+   *  - Render
    */
   int
     run(HINSTANCE hInst, int nCmdShow);
 
   /**
    * @brief Inicializo todos los sistemas del motor.
-   *
-   * @return HRESULT  `S_OK` si todo se inicializó correctamente, o error si algo falló.
-   *
-   * @details
-   *  Aquí creo la ventana, el dispositivo, el contexto, el swap chain y los buffers.
-   *  También cargo los shaders, las texturas y el modelo que se va a renderizar.
+   * @return HRESULT  S_OK si todo salió bien.
    */
   HRESULT
     init();
 
   /**
-   * @brief Actualizo la lógica del juego o escena.
+   * @brief Actualización por frame.
    *
-   * @param deltaTime  Tiempo transcurrido entre frames.
-   *
-   * @details
-   *  Aquí manejo animaciones, transformaciones y cualquier otra lógica del juego.
-   *  Se ejecuta una vez por frame.
+   * @param deltaTime tiempo transcurrido desde el frame anterior.
    */
   void
     update(float deltaTime);
 
   /**
-   * @brief Renderizo la escena.
-   *
-   * @details
-   *  Aquí limpio los buffers, activo los shaders, seteo las texturas y dibujo la geometría.
-   *  Es el corazón visual del motor: todo lo que se vea en pantalla pasa por aquí.
+   * @brief Renderizo la escena cada frame.
    */
   void
     render();
 
   /**
-   * @brief Destruyo y libero todos los recursos del motor.
+   * @brief Libero todos los recursos del motor.
    *
    * @details
-   *  Libero los buffers, shaders, texturas, vistas y demás objetos de Direct3D.
-   *  Siempre lo llamo al final para dejar limpio el contexto.
+   *  Aquí destruyo:
+   *  - Buffers
+   *  - Texturas
+   *  - Vistas
+   *  - UI
+   *  - etc.
    */
   void
     destroy();
 
 private:
-
   /**
-   * @brief Procedimiento de ventana (WndProc) para manejar mensajes del sistema.
-   *
-   * @param hWnd     Handle de la ventana.
-   * @param message  Tipo de mensaje (input, resize, close, etc.).
-   * @param wParam   Parámetro adicional (depende del mensaje).
-   * @param lParam   Parámetro adicional (depende del mensaje).
-   *
-   * @return LRESULT Resultado del procesamiento del mensaje.
+   * @brief Procedimiento de la ventana (Win32)
    *
    * @details
-   *  Aquí proceso los eventos de Windows: cerrar ventana, redimensionar, teclado, etc.
-   *  Es una función estática porque Windows la requiere así, pero internamente
-   *  puede redirigir los eventos al motor.
+   *  Aquí recibo eventos como teclado, redimensionar o cerrar ventana.
    */
   static LRESULT CALLBACK
     wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
-  // ------------------------------------------------------------
-  // Componentes base del motor
-  // ------------------------------------------------------------
+  // --- subsistemas base ---
+  Window m_window;            ///< Ventana principal
+  Device m_device;            ///< Dispositivo DirectX11
+  DeviceContext m_deviceContext; ///< Contexto de dispositivo (GPU)
+  SwapChain m_swapChain;      ///< Maneja front/back buffer
 
-  Window m_window;                  ///< Ventana principal del motor.
-  Device m_device;                  ///< Dispositivo Direct3D (crea recursos).
-  DeviceContext m_deviceContext;    ///< Contexto de dispositivo (ejecuta las órdenes a la GPU).
-  SwapChain m_swapChain;            ///< Administra el intercambio de buffers (back/front).
-  Texture m_backBuffer;             ///< Textura del back buffer.
-  RenderTargetView m_renderTargetView; ///< Render Target principal.
-  Texture m_depthStencil;           ///< Textura usada como buffer de profundidad.
-  DepthStencilView m_depthStencilView; ///< Vista del depth stencil.
-  Viewport m_viewport;              ///< Área de dibujo (viewport activo).
-  ShaderProgram m_shaderProgram;    ///< Shaders usados para renderizar.
-  MeshComponent m_mesh;             ///< Malla principal del modelo cargado.
-  Buffer m_vertexBuffer;            ///< Buffer de vértices.
-  Buffer m_indexBuffer;             ///< Buffer de índices.
-  Buffer m_cbNeverChanges;          ///< Constant buffer estático (view).
-  Buffer m_cbChangeOnResize;        ///< Constant buffer para cambios de tamaño (projection).
-  Buffer m_cbChangesEveryFrame;     ///< Constant buffer dinámico (world y color).
-  Texture m_textureCube;            ///< Textura del modelo (por ejemplo, cubo).
-  SamplerState m_samplerState;      ///< Estado de muestreo de textura.
+  // --- targets y depth ---
+  Texture m_backBuffer;
+  RenderTargetView m_renderTargetView;
+  Texture m_depthStencil;
+  DepthStencilView m_depthStencilView;
 
-  // ------------------------------------------------------------
-  // Variables de transformación y color
-  // ------------------------------------------------------------
-  XMMATRIX m_World;                 ///< Matriz de mundo (posición/rotación del modelo).
-  XMMATRIX m_View;                  ///< Matriz de vista (cámara).
-  XMMATRIX m_Projection;            ///< Matriz de proyección.
-  XMFLOAT4 m_vMeshColor;            ///< Color del modelo.
+  // --- viewport ---
+  Viewport m_viewport;
 
-  // ------------------------------------------------------------
-  // Constant buffers estructurados (para enviar a shaders)
-  // ------------------------------------------------------------
-  CBChangeOnResize cbChangesOnResize; ///< Datos de proyección.
-  CBNeverChanges cbNeverChanges;      ///< Datos de vista.
-  CBChangesEveryFrame cb;             ///< Datos de mundo y color.
+  // --- shader principal ---
+  ShaderProgram m_shaderProgram;
 
-  // ------------------------------------------------------------
-  // Herramientas auxiliares
-  // ------------------------------------------------------------
-  ModelLoader m_modelLoader;         ///< Cargador de modelos 3D (.obj, etc).
+  // --- constant buffers ---
+  Buffer m_cbNeverChanges;
+  Buffer m_cbChangeOnResize;
+
+  // --- textura del modelo principal (avión) ---
+  Texture m_abeBowserAlbedo;
+
+  // --- matrices cámara ---
+  XMMATRIX m_View;
+  XMMATRIX m_Projection;
+
+  // --- actores de la escena ---
+  std::vector<EU::TSharedPointer<Actor>> m_actors;
+  EU::TSharedPointer<Actor> m_abeBowser;
+
+  // --- modelo cargado ---
+  Model3D* m_model;
+
+  // --- data para constant buffers ---
+  CBChangeOnResize cbChangesOnResize;
+  CBNeverChanges cbNeverChanges;
+
+  // --- interfaz gráfica ---
+  UserInterface m_userInterface;
 };

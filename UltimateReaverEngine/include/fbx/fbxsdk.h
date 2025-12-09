@@ -1,12 +1,12 @@
 /****************************************************************************************
- 
+
    Copyright (C) 2016 Autodesk, Inc.
    All rights reserved.
- 
+
    Use of this software is subject to the terms of the Autodesk license agreement
    provided at the time of installation or download, or which otherwise accompanies
    this software in either electronic or hard copy form.
- 
+
 ****************************************************************************************/
 
 //! \file fbxsdk.h
@@ -17,8 +17,8 @@
   * \mainpage FBX SDK Reference
   * <p>
   * \section welcome Welcome to the FBX SDK Reference
-  * The FBX SDK Reference contains reference information on every header file, 
-  * namespace, class, method, enum, typedef, variable, and other C++ elements 
+  * The FBX SDK Reference contains reference information on every header file,
+  * namespace, class, method, enum, typedef, variable, and other C++ elements
   * that comprise the FBX software development kit (SDK).
   * <p>
   * The FBX SDK Reference is organized into the following sections:
@@ -28,24 +28,24 @@
   *     <li>File List: an alphabetical list of all documented header files</ul>
   * <p>
   * \section otherdocumentation Other Documentation
-  * Apart from this reference guide, an FBX SDK Programming Guide and many FBX 
+  * Apart from this reference guide, an FBX SDK Programming Guide and many FBX
   * SDK examples are also provided.
   * <p>
   * \section aboutFBXSDK About the FBX SDK
-  * The FBX SDK is a C++ software development kit (SDK) that lets you import 
-  * and export 3D scenes using the Autodesk FBX file format. The FBX SDK 
-  * reads FBX files created with FiLMBOX version 2.5 and later and writes FBX 
-  * files compatible with MotionBuilder version 6.0 and up. 
+  * The FBX SDK is a C++ software development kit (SDK) that lets you import
+  * and export 3D scenes using the Autodesk FBX file format. The FBX SDK
+  * reads FBX files created with FiLMBOX version 2.5 and later and writes FBX
+  * files compatible with MotionBuilder version 6.0 and up.
   */
 
 #include <fbxsdk/fbxsdk_def.h>
 
 #ifndef FBXSDK_NAMESPACE_USING
-	#define FBXSDK_NAMESPACE_USING 1
+#define FBXSDK_NAMESPACE_USING 1
 #endif
 
-//---------------------------------------------------------------------------------------
-//Core Base Includes
+  //---------------------------------------------------------------------------------------
+  //Core Base Includes
 #include <fbxsdk/core/base/fbxarray.h>
 #include <fbxsdk/core/base/fbxbitset.h>
 #include <fbxsdk/core/base/fbxcharptrset.h>
@@ -54,7 +54,7 @@
 #include <fbxsdk/core/base/fbxstatus.h>
 #include <fbxsdk/core/base/fbxfile.h>
 #ifndef FBXSDK_ENV_WINSTORE
-	#include <fbxsdk/core/base/fbxfolder.h>
+#include <fbxsdk/core/base/fbxfolder.h>
 #endif
 #include <fbxsdk/core/base/fbxhashmap.h>
 #include <fbxsdk/core/base/fbxintrusivelist.h>
@@ -80,10 +80,10 @@
 //---------------------------------------------------------------------------------------
 //Core Sync Includes
 #ifndef FBXSDK_ENV_WINSTORE
-	#include <fbxsdk/core/sync/fbxatomic.h>
-	#include <fbxsdk/core/sync/fbxclock.h>
-	#include <fbxsdk/core/sync/fbxsync.h>
-	#include <fbxsdk/core/sync/fbxthread.h>
+#include <fbxsdk/core/sync/fbxatomic.h>
+#include <fbxsdk/core/sync/fbxclock.h>
+#include <fbxsdk/core/sync/fbxsync.h>
+#include <fbxsdk/core/sync/fbxthread.h>
 #endif /* !FBXSDK_ENV_WINSTORE */
 
 //---------------------------------------------------------------------------------------
@@ -92,15 +92,15 @@
 #include <fbxsdk/core/fbxconnectionpoint.h>
 #include <fbxsdk/core/fbxdatatypes.h>
 #ifndef FBXSDK_ENV_WINSTORE
-	#include <fbxsdk/core/fbxmodule.h>
-	#include <fbxsdk/core/fbxloadingstrategy.h>
+#include <fbxsdk/core/fbxmodule.h>
+#include <fbxsdk/core/fbxloadingstrategy.h>
 #endif /* !FBXSDK_ENV_WINSTORE */
 #include <fbxsdk/core/fbxmanager.h>
 #include <fbxsdk/core/fbxobject.h>
 #include <fbxsdk/core/fbxperipheral.h>
 #ifndef FBXSDK_ENV_WINSTORE
-	#include <fbxsdk/core/fbxplugin.h>
-	#include <fbxsdk/core/fbxplugincontainer.h>
+#include <fbxsdk/core/fbxplugin.h>
+#include <fbxsdk/core/fbxplugincontainer.h>
 #endif /* !FBXSDK_ENV_WINSTORE */
 #include <fbxsdk/core/fbxproperty.h>
 #include <fbxsdk/core/fbxpropertydef.h>
@@ -110,8 +110,8 @@
 #include <fbxsdk/core/fbxquery.h>
 #include <fbxsdk/core/fbxqueryevent.h>
 #ifndef FBXSDK_ENV_WINSTORE
-	#include <fbxsdk/core/fbxscopedloadingdirectory.h>
-	#include <fbxsdk/core/fbxscopedloadingfilename.h>
+#include <fbxsdk/core/fbxscopedloadingdirectory.h>
+#include <fbxsdk/core/fbxscopedloadingfilename.h>
 #endif /* !FBXSDK_ENV_WINSTORE */
 #include <fbxsdk/core/fbxxref.h>
 
@@ -269,7 +269,7 @@
 
 //---------------------------------------------------------------------------------------
 #if defined(FBXSDK_NAMESPACE) && (FBXSDK_NAMESPACE_USING == 1)
-	using namespace FBXSDK_NAMESPACE;
+using namespace FBXSDK_NAMESPACE;
 #endif
 
 #endif /* _FBXSDK_H_ */
