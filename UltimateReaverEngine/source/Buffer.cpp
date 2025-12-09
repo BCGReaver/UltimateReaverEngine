@@ -102,12 +102,20 @@ Buffer::render(DeviceContext& deviceContext,
 
 	switch (m_bindFlag) {
 	case D3D11_BIND_VERTEX_BUFFER:
-		deviceContext.m_deviceContext->IASetVertexBuffers(StartSlot, NumBuffers, &m_buffer, &m_stride, &m_offset);
+		deviceContext.m_deviceContext->IASetVertexBuffers(StartSlot,
+			NumBuffers,
+			&m_buffer,
+			&m_stride,
+			&m_offset);
 		break;
 	case D3D11_BIND_CONSTANT_BUFFER:
-		deviceContext.m_deviceContext->VSSetConstantBuffers(StartSlot, NumBuffers, &m_buffer);
+		deviceContext.m_deviceContext->VSSetConstantBuffers(StartSlot,
+			NumBuffers,
+			&m_buffer);
 		if (setPixelShader) {
-			deviceContext.m_deviceContext->PSSetConstantBuffers(StartSlot, NumBuffers, &m_buffer);
+			deviceContext.m_deviceContext->PSSetConstantBuffers(StartSlot,
+				NumBuffers,
+				&m_buffer);
 		}
 		break;
 	case D3D11_BIND_INDEX_BUFFER:
@@ -126,8 +134,8 @@ Buffer::destroy() {
 
 HRESULT
 Buffer::createBuffer(Device& device,
-										 D3D11_BUFFER_DESC& desc,
-										 D3D11_SUBRESOURCE_DATA* initData) {
+	D3D11_BUFFER_DESC& desc,
+	D3D11_SUBRESOURCE_DATA* initData) {
 	if (!device.m_device) {
 		ERROR("Buffer", "createBuffer", "Device is nullptr");
 		return E_POINTER;
